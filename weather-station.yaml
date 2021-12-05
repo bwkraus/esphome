@@ -146,9 +146,10 @@ sensor:
   name: ADC
   internal: true
   update_interval: 30s
+  raw: true
   filters:
     # - multiply: 3.3 ##built into Wemos
-    # - multiply: 0.0009775171   #1/1023
+    - multiply: 0.0009775171   #1/1023
   accuracy_decimals: 3 ##IMPORTANT to get resolution for resistance sensor
     
 ### ADD WIND CARIDNAL DIRECTION
