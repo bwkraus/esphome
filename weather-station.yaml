@@ -34,6 +34,7 @@ i2c:
   #scan: true
   id: bus_a
 
+#Temp/humidity sensor
 sensor:
 - platform: bme280
   i2c_id: bus_a
@@ -47,12 +48,14 @@ sensor:
   address: 0x76
   update_interval: 30s
 
+#Lux Sensor
 - platform: bh1750
   i2c_id: bus_a
   name: Lux
   address: 0x23
   update_interval: 25s
-  
+
+#battery sensor  
 - platform: adc
   pin: A0
   name: "Solar Weather Station Battery"
@@ -60,15 +63,237 @@ sensor:
   accuracy_decimals: 4
   filters:
    - multiply: 5.1923
-   
-     # WiFi Signal sensor.
+
+#Wind Sensor
+- platform: pulse_counter
+  pin: 
+    # pin D5
+    number: GPIO14
+    mode: INPUT_PULLUP
+  unit_of_measurement: 'mph'
+  name: 'Wind sensor'
+  icon: 'mdi:weather-windy'
+  id: my_wind
+  count_mode:
+    rising_edge: DISABLE
+    falling_edge: INCREMENT
+  internal_filter: 13us
+  update_interval: 15s
+  accuracy_decimals: 2
+  filters:
+    - multiply: 0.04973
+    - sliding_window_moving_average:
+        window_size: 2
+        send_every: 1
+          #send_first_at: 60 # can be used to prevent an unrealistic high value at startup (cannot be larger than send_every)
+
+
+#- platform: template
+#  name: "Template Sensor"
+#  id: template_sens
+#  filters:
+#      - multiply: 0.2794
+#      - multiply: 60 (to get mm/h)
+#    - multiply: 16.764
+#    - sliding_window_moving_average:
+#        window_size: 60
+#        send_every: 1
+
+
+#Rain Gauge
+- platform: pulse_counter
+  pin: 
+    number: GPIO25
+    mode: INPUT_PULLUP
+  unit_of_measurement: 'in' ##change to mm if metric
+  name: 'Rain gauge'
+  icon: 'mdi:weather-rainy'
+  id: my_rain
+  internal: true
+  count_mode:
+    rising_edge: DISABLE
+    falling_edge: INCREMENT
+  internal_filter: 13us
+  update_interval: 30s
+    #buckets = pulses
+    #mm_per_bucket=0.2794
+    #rain = buckets*0.2794
+  filters:
+  #    - multiply: 0.2794 #for mm
+    - multiply: 0.011 # to inches
+  accuracy_decimals: 3
+
+- platform: integration
+  name: "Rainfall per min"
+  id: rain_per_min
+  time_unit: min
+  unit_of_measurement: 'in'
+  sensor: my_rain
+    
+- platform: total_daily_energy
+  name: "Total Daily Rain"
+  power_id: my_rain
+  unit_of_measurement: 'in' ###change to mm if metric
+  icon: 'mdi:weather-rainy'
+  # x60 To convert to aggregated rain amount
+  filters:
+    - multiply: 60
+
+#Wind Direction
+- platform: adc
+  id: adc_sensor
+  pin: GPIO35
+  name: ADC
+  internal: true
+  update_interval: 30s
+  filters:
+    # - multiply: 3.3 ##built into Wemos
+    # - multiply: 0.0009775171   #1/1023
+  accuracy_decimals: 3 ##IMPORTANT to get resolution for resistance sensor
+    
+### ADD WIND CARIDNAL DIRECTION
+### Your values may differ!
+# Direction -- Resistance -- ADC Voltage
+# N -- 3132Ω -- 0.79v
+# NE -- 1643Ω -- 0.47v
+# E -- 292Ω -- 0.10v
+# SE -- 602Ω -- 0.19v
+# S -- 974Ω -- 0.29v
+# SW -- 2372Ω -- 0.63v
+# W -- 3997Ω -- 0.94v
+# NW -- 3657Ω -- 0.88v
+- platform: resistance
+  sensor: adc_sensor
+  id: resistance_sensor
+  configuration: DOWNSTREAM
+  resistor: 10kOhm
+  internal: true
+  name: Resistance Sensor
+  accuracy_decimals: 1
+  filters:
+    - heartbeat: 30s #thinking of increasing interval to plot better
+  on_value:
+    - if:
+        condition:
+          sensor.in_range:
+            id: resistance_sensor
+            above: 3100
+            below: 3200
+        then:
+          - text_sensor.template.publish:
+              id: wind_dir_card
+              state: "N"
+          - sensor.template.publish:
+              id: wind_heading
+              state: 0.0
+              
+    - if:
+        condition:
+          sensor.in_range:
+            id: resistance_sensor
+            above: 1600
+            below: 1700
+        then:
+          - text_sensor.template.publish:
+              id: wind_dir_card
+              state: "NE"         
+          - sensor.template.publish:
+              id: wind_heading
+              state: 45.0            
+    - if:
+        condition:
+          sensor.in_range:
+            id: resistance_sensor
+            above: 250
+            below: 350
+        then:
+          - text_sensor.template.publish:
+              id: wind_dir_card
+              state: "E"                
+          - sensor.template.publish:
+              id: wind_heading
+              state: 90.0          
+    - if:
+        condition:
+          sensor.in_range:
+            id: resistance_sensor
+            above: 550
+            below: 650
+        then:
+          - text_sensor.template.publish:
+              id: wind_dir_card
+              state: "SE"    
+          - sensor.template.publish:
+              id: wind_heading
+              state: 135.0             
+    - if:
+        condition:
+          sensor.in_range:
+           id: resistance_sensor
+           above: 900
+           below: 1100
+        then:
+          - text_sensor.template.publish:
+              id: wind_dir_card
+              state: "S"    
+          - sensor.template.publish:
+              id: wind_heading
+              state: 180.0            
+    - if:
+        condition:
+          sensor.in_range:
+            id: resistance_sensor
+            above: 2300
+            below: 2450
+        then:
+          - text_sensor.template.publish:
+              id: wind_dir_card
+              state: "SW"    
+          - sensor.template.publish:
+              id: wind_heading
+              state: 225.0              
+    - if:
+        condition:
+          sensor.in_range:
+            id: resistance_sensor
+            above: 3900
+            below: 4100
+        then:
+          - text_sensor.template.publish:
+              id: wind_dir_card
+              state: "W"    
+          - sensor.template.publish:
+              id: wind_heading
+              state: 270.0          
+    - if:
+        condition:
+          sensor.in_range:
+            id: resistance_sensor
+            above: 3500
+            below: 3800
+        then:
+          - text_sensor.template.publish:
+              id: wind_dir_card
+              state: "NW"    
+          - sensor.template.publish:
+              id: wind_heading
+              state: 315.0
+              
+- platform: template
+  name: "Wind Heading"
+  id: wind_heading
+  unit_of_measurement: "°"
+            
+        
+            
+#WiFi Signal sensor.
 - platform: wifi_signal
   name: ${name} WiFi Signal
   update_interval: 60s
 
-deep_sleep:
-  run_duration: 60s
-  sleep_duration: 4min
+#deep_sleep:
+#  run_duration: 60s
+#  sleep_duration: 3min
 
 status_led:
   pin: GPIO2
@@ -91,3 +316,7 @@ text_sensor:
       name: ${name} SSID
     bssid:
       name: ${name} BSSID
+      
+  - platform: template
+    name: "Wind Cardinal Direction"
+    id: wind_dir_card    
