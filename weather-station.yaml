@@ -53,16 +53,16 @@ sensor:
   i2c_id: bus_a
   name: Lux
   address: 0x23
-  update_interval: 25s
+  update_interval: 30s
 
 #battery sensor  
 - platform: adc
-  pin: A0
+  pin: GPIO33
   name: "Solar Weather Station Battery"
   update_interval: 30s
   accuracy_decimals: 4
   filters:
-   - multiply: 5.1923
+   - multiply: 3.307
 
 #Wind Sensor
 - platform: pulse_counter
@@ -78,7 +78,7 @@ sensor:
     rising_edge: DISABLE
     falling_edge: INCREMENT
   internal_filter: 13us
-  update_interval: 15s
+  update_interval: 30s
   accuracy_decimals: 2
   filters:
     - multiply: 0.04973
@@ -143,13 +143,13 @@ sensor:
 - platform: adc
   id: adc_sensor
   pin: GPIO35
-  name: ADC
+  name: "Windvane raw ADC"
   internal: true
   update_interval: 30s
-  raw: true
-  filters:
+  #raw: true
+  #filters:
     # - multiply: 3.3 ##built into Wemos
-    - multiply: 0.0009775171   #1/1023
+  # - multiply: 0.0009775171   #1/1023
   accuracy_decimals: 3 ##IMPORTANT to get resolution for resistance sensor
     
 ### ADD WIND CARIDNAL DIRECTION
@@ -169,7 +169,7 @@ sensor:
   configuration: DOWNSTREAM
   resistor: 10kOhm
   internal: true
-  name: Resistance Sensor
+  name: "Windvane Resistance Sensor"
   accuracy_decimals: 1
   filters:
     - heartbeat: 30s #thinking of increasing interval to plot better
@@ -290,7 +290,7 @@ sensor:
 #WiFi Signal sensor.
 - platform: wifi_signal
   name: ${name} WiFi Signal
-  update_interval: 60s
+  update_interval: 30s
 
 #deep_sleep:
 #  run_duration: 60s
